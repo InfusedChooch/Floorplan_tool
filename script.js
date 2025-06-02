@@ -211,35 +211,47 @@ window.onload = () => {
   }, 100);
 };
 
-// ─── Export All Floors as One PNG ──────────────────
 exportBtn.addEventListener("click", () => {
-  console.log("🔁 Export triggered");
-
   const studentName = document.getElementById("studentName")?.value || "Student";
   const projectTitle = document.getElementById("projectTitle")?.value || "Project";
 
-  const labelHeight = 30;
-  const floorCount = floors.length;
+  const labelHeight = 45;
   const canvasWidth = gridWidth * tileSize;
-  const canvasHeight = floorCount * (gridHeight * tileSize + labelHeight);
+  const canvasHeight = floors.length * (gridHeight * tileSize + labelHeight);
 
   const exportCanvas = document.createElement("canvas");
+  const exportCtx = exportCanvas.getContext("2d");
   exportCanvas.width = canvasWidth;
   exportCanvas.height = canvasHeight;
-  const exportCtx = exportCanvas.getContext("2d");
 
-  // Render each floor
-  floors.forEach((floorGrid, i) => {
+  floors.forEach((grid, i) => {
     const yOffset = i * (gridHeight * tileSize + labelHeight);
 
-    // Floor label
+    // Calculate block count for this floor
+    const count = {};
+    grid.forEach(row => {
+      row.forEach(block => {
+        if (block) count[block] = (count[block] || 0) + 1;
+      });
+    });
+
+    // Format block counts
+    const label = `Floor ${i + 1}`;
+    const stats = Object.entries(count)
+      .map(([b, n]) => `${b.replaceAll("_", " ").replace(/\b\w/g, l => l.toUpperCase())}: ${n}`)
+      .join(" | ");
+
+    // Draw label and stats
     exportCtx.fillStyle = "#000";
     exportCtx.font = "16px sans-serif";
-    exportCtx.fillText(`Floor ${i + 1}`, 10, yOffset + 20);
+    exportCtx.fillText(label, 10, yOffset + 18);
+    exportCtx.font = "14px sans-serif";
+    exportCtx.fillText(stats, 10, yOffset + 38);
 
+    // Draw grid tiles
     for (let y = 0; y < gridHeight; y++) {
       for (let x = 0; x < gridWidth; x++) {
-        const block = floorGrid[y][x];
+        const block = grid[y][x];
         if (block && blockImages[block]) {
           exportCtx.drawImage(
             blockImages[block],
@@ -259,6 +271,13 @@ exportBtn.addEventListener("click", () => {
       }
     }
   });
+
+  const link = document.createElement("a");
+  link.download = `${studentName}_${projectTitle}.png`.replaceAll(" ", "_");
+  link.href = exportCanvas.toDataURL("image/png");
+  link.click();
+});
+
 
   // Trigger download
   try {
