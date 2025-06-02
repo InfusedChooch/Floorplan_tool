@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!-- index.html -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minecraft Floorplan Creator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="header">
+    <h1>Minecraft Design Tool</h1>
+  </div>
+
+  <div class="project-info">
+    <input type="text" id="studentName" placeholder="Student Name" />
+    <input type="text" id="projectTitle" placeholder="Project Title" />
+    <input type="text" id="floorLevel" placeholder="What Floor?" />
+  </div>
+
+  <div class="design-section">
+    <div class="canvas-wrapper">
+      <canvas id="floorCanvas"></canvas>
+      <div id="hoverCoords">0, 0</div>
+    </div>
+
+<div class="floor-controls">
+  <label>Floor: <span id="floorNumber">1</span></label>
+  <div class="floor-buttons">
+    <button id="prevFloor">←</button>
+    <button id="nextFloor">→</button>
+    <button id="addFloor">+ Add Floor</button>
+  </div>
+  
+  <!-- Block counts directly under the floor buttons -->
+  <div id="blockCounts" style="margin-top: 10px; font-size: 0.9rem;"></div>
+</div>
+
+
+    <div class="settings">
+      <label for="widthInput">Width:</label>
+      <input type="number" id="widthInput" min="4" max="50" step="2" value="16" />
+      <label for="heightInput">Height:</label>
+      <input type="number" id="heightInput" min="4" max="50" step="2" value="16" />
+      <button id="updateGrid">Update Grid Size</button>
+      <button id="resetGrid">Fill grid to selected material</button>
+      <button id="clearGrid">Clear All</button>
+      <button id="exportBtn">Save Design</button>
+    </div>
+  </div>
+
+  <div class="palette-section">
+    <h2>Material</h2>
+    <div id="selectedMaterial">Selected: <span id="currentBlock">stone</span></div>
+    <div id="blockPalette" class="scroll-palette">
+      <!-- Images are populated from JS -->
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

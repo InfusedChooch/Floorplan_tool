@@ -1,0 +1,28 @@
+import os
+from PIL import Image
+
+# Input/output paths
+INPUT_DIR = "assets"
+OUTPUT_DIR = "converted_assets"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Helper: Clean filename
+def normalize_name(name):
+    name = name.lower().replace(" ", "_").replace("__", "_")
+    name = name.replace(".webp", "").replace(".png", "")
+    name = name.replace("block_of_emeral", "block_of_emerald")
+    name = name.replace("_.", ".").rstrip("_")
+    return f"{name}.png"
+
+# Convert each file
+for filename in os.listdir(INPUT_DIR):
+    if filename.lower().endswith((".webp", ".png")):
+        input_path = os.path.join(INPUT_DIR, filename)
+        output_path = os.path.join(OUTPUT_DIR, normalize_name(filename))
+
+        try:
+            img = Image.open(input_path).convert("RGBA")
+            img.save(output_path, "PNG")
+            print(f"✅ Converted: {filename} → {os.path.basename(output_path)}")
+        except Exception as e:
+            print(f"❌ Failed to convert {filename}: {e}")
