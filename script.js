@@ -217,8 +217,12 @@ exportBtn.addEventListener("click", () => {
 
   const labelHeight = 60;
   const headerHeight = 60;
-  const canvasWidth = gridWidth * tileSize;
-  const canvasHeight = headerHeight + floors.length * (gridHeight * tileSize + labelHeight + 10);
+  const paddingBetweenFloors = 20;
+  const floorsPerRow = 2;
+  const rows = Math.ceil(floors.length / floorsPerRow);
+
+  const canvasWidth = gridWidth * tileSize * floorsPerRow;
+  const canvasHeight = headerHeight + rows * (gridHeight * tileSize + labelHeight + paddingBetweenFloors);
 
   const exportCanvas = document.createElement("canvas");
   exportCanvas.width = canvasWidth;
@@ -236,7 +240,10 @@ exportBtn.addEventListener("click", () => {
   exportCtx.fillText(`Project: ${projectTitle}`, 10, 55);
 
   floors.forEach((grid, i) => {
-    const yOffset = headerHeight + i * (gridHeight * tileSize + labelHeight + 10);
+    const col = i % floorsPerRow;
+    const row = Math.floor(i / floorsPerRow);
+    const xOffset = col * gridWidth * tileSize;
+    const yOffset = headerHeight + row * (gridHeight * tileSize + labelHeight + paddingBetweenFloors);
 
     const count = {};
     grid.forEach(row => {
@@ -250,25 +257,25 @@ exportBtn.addEventListener("click", () => {
       .map(([b, n]) => `${normalize(b)}: ${n}`)
       .join(" | ");
 
-    // Floor Title
+    exportCtx.fillStyle = "#f7f7f7";
+    exportCtx.fillRect(xOffset, yOffset - 10, gridWidth * tileSize, labelHeight + gridHeight * tileSize + 10);
+
     exportCtx.fillStyle = "#000";
     exportCtx.font = "bold 16px sans-serif";
-    exportCtx.fillText(label, 10, yOffset + 20);
+    exportCtx.fillText(label, xOffset + 10, yOffset + 20);
     exportCtx.font = "14px sans-serif";
-    exportCtx.fillText(stats, 10, yOffset + 40);
+    exportCtx.fillText(stats, xOffset + 10, yOffset + 40);
 
-    // Border box
-    exportCtx.strokeStyle = "#999";
-    exportCtx.strokeRect(0, yOffset + labelHeight - 10, canvasWidth, gridHeight * tileSize + 20);
+    exportCtx.strokeStyle = "#bbb";
+    exportCtx.strokeRect(xOffset, yOffset - 10, gridWidth * tileSize, labelHeight + gridHeight * tileSize + 10);
 
-    // Grid tiles
     for (let y = 0; y < gridHeight; y++) {
       for (let x = 0; x < gridWidth; x++) {
         const block = grid[y][x];
         if (block && blockImages[block]) {
           exportCtx.drawImage(
             blockImages[block],
-            x * tileSize,
+            xOffset + x * tileSize,
             yOffset + labelHeight + y * tileSize,
             tileSize,
             tileSize
@@ -276,7 +283,7 @@ exportBtn.addEventListener("click", () => {
         }
         exportCtx.strokeStyle = "#ccc";
         exportCtx.strokeRect(
-          x * tileSize,
+          xOffset + x * tileSize,
           yOffset + labelHeight + y * tileSize,
           tileSize,
           tileSize
@@ -297,6 +304,7 @@ exportBtn.addEventListener("click", () => {
     console.error("❌ Export failed:", err);
   }
 });
+
 
 window.onload = () => {
   setTimeout(() => {
