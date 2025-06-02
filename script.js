@@ -198,18 +198,30 @@ exportBtn.addEventListener("click", () => {
   const studentName = document.getElementById("studentName")?.value || "Student";
   const projectTitle = document.getElementById("projectTitle")?.value || "Project";
 
-  const labelHeight = 45;
+  const labelHeight = 60;
+  const headerHeight = 60;
   const canvasWidth = gridWidth * tileSize;
-  const canvasHeight = floors.length * (gridHeight * tileSize + labelHeight);
+  const canvasHeight = headerHeight + floors.length * (gridHeight * tileSize + labelHeight + 10);
 
   const exportCanvas = document.createElement("canvas");
   exportCanvas.width = canvasWidth;
   exportCanvas.height = canvasHeight;
   const exportCtx = exportCanvas.getContext("2d");
 
-  floors.forEach((grid, i) => {
-    const yOffset = i * (gridHeight * tileSize + labelHeight);
+  // Background
+  exportCtx.fillStyle = "#fff";
+  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
+  // Header
+  exportCtx.fillStyle = "#000";
+  exportCtx.font = "20px sans-serif";
+  exportCtx.fillText(`Student: ${studentName}`, 10, 30);
+  exportCtx.fillText(`Project: ${projectTitle}`, 10, 55);
+
+  floors.forEach((grid, i) => {
+    const yOffset = headerHeight + i * (gridHeight * tileSize + labelHeight + 10);
+
+    // Count blocks
     const count = {};
     grid.forEach(row => {
       row.forEach(block => {
@@ -222,10 +234,18 @@ exportBtn.addEventListener("click", () => {
       .map(([b, n]) => `${normalize(b)}: ${n}`)
       .join(" | ");
 
+    // Floor Title and Stats
     exportCtx.fillStyle = "#000";
-    exportCtx.font = "16px sans-serif";
-    exportCtx.fillText(`${label} — ${stats}`, 10, yOffset + 30);
+    exportCtx.font = "bold 16px sans-serif";
+    exportCtx.fillText(label, 10, yOffset + 20);
+    exportCtx.font = "14px sans-serif";
+    exportCtx.fillText(stats, 10, yOffset + 40);
 
+    // Border around floor
+    exportCtx.strokeStyle = "#999";
+    exportCtx.strokeRect(0, yOffset + labelHeight - 10, canvasWidth, gridHeight * tileSize + 20);
+
+    // Draw grid
     for (let y = 0; y < gridHeight; y++) {
       for (let x = 0; x < gridWidth; x++) {
         const block = grid[y][x];
@@ -261,6 +281,7 @@ exportBtn.addEventListener("click", () => {
     console.error("❌ Export failed:", err);
   }
 });
+
 
 window.onload = () => {
   setTimeout(() => {
