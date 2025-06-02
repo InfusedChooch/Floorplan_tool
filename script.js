@@ -199,53 +199,52 @@ exportBtn.addEventListener("click", () => {
   const projectTitle = document.getElementById("projectTitle")?.value || "Project";
 
   const labelHeight = 60;
-  const headerHeight = 60;
+  const headerHeight = 70;
+  const paddingBetweenFloors = 20;
   const canvasWidth = gridWidth * tileSize;
-  const canvasHeight = headerHeight + floors.length * (gridHeight * tileSize + labelHeight + 10);
+  const canvasHeight = headerHeight + floors.length * (gridHeight * tileSize + labelHeight + paddingBetweenFloors);
 
   const exportCanvas = document.createElement("canvas");
   exportCanvas.width = canvasWidth;
   exportCanvas.height = canvasHeight;
   const exportCtx = exportCanvas.getContext("2d");
 
-  // Background
-  exportCtx.fillStyle = "#fff";
+  // White background
+  exportCtx.fillStyle = "#ffffff";
   exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
-  // Header
-  exportCtx.fillStyle = "#000";
+  // Header block
+  exportCtx.fillStyle = "#000000";
   exportCtx.font = "20px sans-serif";
   exportCtx.fillText(`Student: ${studentName}`, 10, 30);
   exportCtx.fillText(`Project: ${projectTitle}`, 10, 55);
 
   floors.forEach((grid, i) => {
-    const yOffset = headerHeight + i * (gridHeight * tileSize + labelHeight + 10);
+    const baseY = headerHeight + i * (gridHeight * tileSize + labelHeight + paddingBetweenFloors);
 
     // Count blocks
     const count = {};
-    grid.forEach(row => {
-      row.forEach(block => {
-        if (block) count[block] = (count[block] || 0) + 1;
-      });
-    });
+    grid.forEach(row => row.forEach(block => {
+      if (block) count[block] = (count[block] || 0) + 1;
+    }));
 
     const label = `Floor ${i + 1}`;
     const stats = Object.entries(count)
       .map(([b, n]) => `${normalize(b)}: ${n}`)
       .join(" | ");
 
-    // Floor Title and Stats
+    // Background box per floor
+    exportCtx.fillStyle = "#f7f7f7";
+    exportCtx.fillRect(0, baseY - 10, canvasWidth, labelHeight + gridHeight * tileSize + 10);
+
+    // Floor label and stats
     exportCtx.fillStyle = "#000";
     exportCtx.font = "bold 16px sans-serif";
-    exportCtx.fillText(label, 10, yOffset + 20);
+    exportCtx.fillText(label, 10, baseY + 18);
     exportCtx.font = "14px sans-serif";
-    exportCtx.fillText(stats, 10, yOffset + 40);
+    exportCtx.fillText(stats, 10, baseY + 40);
 
-    // Border around floor
-    exportCtx.strokeStyle = "#999";
-    exportCtx.strokeRect(0, yOffset + labelHeight - 10, canvasWidth, gridHeight * tileSize + 20);
-
-    // Draw grid
+    // Grid content
     for (let y = 0; y < gridHeight; y++) {
       for (let x = 0; x < gridWidth; x++) {
         const block = grid[y][x];
@@ -253,7 +252,7 @@ exportBtn.addEventListener("click", () => {
           exportCtx.drawImage(
             blockImages[block],
             x * tileSize,
-            yOffset + labelHeight + y * tileSize,
+            baseY + labelHeight + y * tileSize,
             tileSize,
             tileSize
           );
@@ -261,14 +260,19 @@ exportBtn.addEventListener("click", () => {
         exportCtx.strokeStyle = "#ccc";
         exportCtx.strokeRect(
           x * tileSize,
-          yOffset + labelHeight + y * tileSize,
+          baseY + labelHeight + y * tileSize,
           tileSize,
           tileSize
         );
       }
     }
+
+    // Border
+    exportCtx.strokeStyle = "#bbb";
+    exportCtx.strokeRect(0, baseY - 10, canvasWidth, labelHeight + gridHeight * tileSize + 10);
   });
 
+  // Download
   try {
     const link = document.createElement("a");
     link.download = `${studentName}_${projectTitle}.png`.replaceAll(" ", "_");
