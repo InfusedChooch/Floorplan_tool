@@ -1,4 +1,4 @@
-// script.js – Minecraft Floorplan Creator Logic (Multi-Floor Edition + Normalized Block Names)
+// script.js – Minecraft Floorplan Creator Logic (Enhanced Export Labels)
 
 const canvas = document.getElementById("floorCanvas");
 const ctx = canvas.getContext("2d");
@@ -10,6 +10,7 @@ const widthInput = document.getElementById("widthInput");
 const heightInput = document.getElementById("heightInput");
 const updateGridBtn = document.getElementById("updateGrid");
 const resetGridBtn = document.getElementById("resetGrid");
+const clearGridBtn = document.getElementById("clearGrid");
 const floorNumber = document.getElementById("floorNumber");
 const addFloorBtn = document.getElementById("addFloor");
 const prevFloorBtn = document.getElementById("prevFloor");
@@ -21,12 +22,11 @@ let blockImages = {};
 let isMouseDown = false;
 let isRightClick = false;
 
-let floors = []; // Multi-floor grid storage
+let floors = [];
 let currentFloor = 0;
 let gridWidth = parseInt(widthInput.value);
 let gridHeight = parseInt(heightInput.value);
 
-// ─── Load Block Images ──────────────────────────────
 const blockList = [
   "acacia_log", "acacia_planks", "basal", "beacon", "birch_log", "birch_plank",
   "block_of_diamond", "block_of_emerald", "block_of_gold", "block_of_iron", "bookshelf", "bricks",
@@ -60,7 +60,6 @@ blockList.forEach(name => {
   });
 });
 
-// ─── Grid Logic ─────────────────────────────────────
 function createEmptyGrid(w, h) {
   return Array.from({ length: h }, () => Array(w).fill(""));
 }
@@ -93,7 +92,6 @@ function drawGrid() {
   }
 }
 
-// ─── Drawing Events ────────────────────────────────
 function placeBlock(e, isErase = false) {
   const rect = canvas.getBoundingClientRect();
   const x = Math.floor((e.clientX - rect.left) / tileSize);
@@ -126,22 +124,20 @@ canvas.addEventListener("mouseup", () => isMouseDown = false);
 canvas.addEventListener("mouseleave", () => isMouseDown = false);
 canvas.addEventListener("contextmenu", e => e.preventDefault());
 
-// ─── UI Controls ───────────────────────────────────
 updateGridBtn.addEventListener("click", () => {
   const newW = parseInt(widthInput.value);
   const newH = parseInt(heightInput.value);
   if (newW % 2 === 0 && newH % 2 === 0) {
-    // Resize the current grid properly
-const newGrid = createEmptyGrid(newW, newH);
-for (let y = 0; y < Math.min(gridHeight, newH); y++) {
-  for (let x = 0; x < Math.min(gridWidth, newW); x++) {
-    newGrid[y][x] = floors[currentFloor][y][x];
-  }
-}
-floors[currentFloor] = newGrid;
-initGrid(newW, newH);
+    const newGrid = createEmptyGrid(newW, newH);
+    for (let y = 0; y < Math.min(gridHeight, newH); y++) {
+      for (let x = 0; x < Math.min(gridWidth, newW); x++) {
+        newGrid[y][x] = floors[currentFloor][y][x];
+      }
+    }
+    floors[currentFloor] = newGrid;
+    initGrid(newW, newH);
   } else {
-    alert("Width and height must be even numbers.");
+    alert("Please enter even values for width and height.");
   }
 });
 
@@ -151,13 +147,11 @@ resetGridBtn.addEventListener("click", () => {
   updateBlockCounts();
 });
 
-const clearGridBtn = document.getElementById("clearGrid");
 clearGridBtn.addEventListener("click", () => {
   floors[currentFloor] = createEmptyGrid(gridWidth, gridHeight);
   drawGrid();
   updateBlockCounts();
 });
-
 
 function updateFloorLabel() {
   floorNumber.textContent = currentFloor + 1;
@@ -200,17 +194,6 @@ function updateBlockCounts() {
     .join("<br>");
 }
 
-// ─── Init ───────────────────────────────────────────
-window.onload = () => {
-  setTimeout(() => {
-    floors.push(createEmptyGrid(gridWidth, gridHeight));
-    updateFloorLabel();
-    initGrid(gridWidth, gridHeight);
-    const firstTile = document.querySelector(".block-tile");
-    if (firstTile) firstTile.classList.add("selected");
-  }, 100);
-};
-
 exportBtn.addEventListener("click", () => {
   const studentName = document.getElementById("studentName")?.value || "Student";
   const projectTitle = document.getElementById("projectTitle")?.value || "Project";
@@ -220,14 +203,13 @@ exportBtn.addEventListener("click", () => {
   const canvasHeight = floors.length * (gridHeight * tileSize + labelHeight);
 
   const exportCanvas = document.createElement("canvas");
-  const exportCtx = exportCanvas.getContext("2d");
   exportCanvas.width = canvasWidth;
   exportCanvas.height = canvasHeight;
+  const exportCtx = exportCanvas.getContext("2d");
 
   floors.forEach((grid, i) => {
     const yOffset = i * (gridHeight * tileSize + labelHeight);
 
-    // Calculate block count for this floor
     const count = {};
     grid.forEach(row => {
       row.forEach(block => {
@@ -235,20 +217,15 @@ exportBtn.addEventListener("click", () => {
       });
     });
 
-    // Format block counts
     const label = `Floor ${i + 1}`;
     const stats = Object.entries(count)
-      .map(([b, n]) => `${b.replaceAll("_", " ").replace(/\b\w/g, l => l.toUpperCase())}: ${n}`)
+      .map(([b, n]) => `${normalize(b)}: ${n}`)
       .join(" | ");
 
-    // Draw label and stats
     exportCtx.fillStyle = "#000";
     exportCtx.font = "16px sans-serif";
-    exportCtx.fillText(label, 10, yOffset + 18);
-    exportCtx.font = "14px sans-serif";
-    exportCtx.fillText(stats, 10, yOffset + 38);
+    exportCtx.fillText(`${label} — ${stats}`, 10, yOffset + 30);
 
-    // Draw grid tiles
     for (let y = 0; y < gridHeight; y++) {
       for (let x = 0; x < gridWidth; x++) {
         const block = grid[y][x];
@@ -272,14 +249,6 @@ exportBtn.addEventListener("click", () => {
     }
   });
 
-  const link = document.createElement("a");
-  link.download = `${studentName}_${projectTitle}.png`.replaceAll(" ", "_");
-  link.href = exportCanvas.toDataURL("image/png");
-  link.click();
-});
-
-
-  // Trigger download
   try {
     const link = document.createElement("a");
     link.download = `${studentName}_${projectTitle}.png`.replaceAll(" ", "_");
@@ -293,3 +262,12 @@ exportBtn.addEventListener("click", () => {
   }
 });
 
+window.onload = () => {
+  setTimeout(() => {
+    floors.push(createEmptyGrid(gridWidth, gridHeight));
+    updateFloorLabel();
+    initGrid(gridWidth, gridHeight);
+    const firstTile = document.querySelector(".block-tile");
+    if (firstTile) firstTile.classList.add("selected");
+  }, 100);
+};
