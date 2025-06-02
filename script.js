@@ -28,13 +28,31 @@ let gridWidth = parseInt(widthInput.value);
 let gridHeight = parseInt(heightInput.value);
 
 const blockList = [
-  "acacia_log", "acacia_planks", "basal", "beacon", "birch_log", "birch_plank",
-  "block_of_diamond", "block_of_emerald", "block_of_gold", "block_of_iron", "bookshelf", "bricks",
-  "chest", "cobblestone", "crafting_table", "enchanting_table", "farmland", "glass", "glowstone",
-  "ice", "jukebox", "moss_block", "mossy_cobblestone", "mud_bricks", "mycelium", "oak_log",
-  "oak_planks", "off_furnace", "podzol", "red_sand", "sand", "sandstone", "spruce_log",
-  "spruce_planks", "stone", "white_glazed_terracotta", "wool"
+  // 🧱 Core building blocks
+  "stone", "cobblestone", "sandstone", "bricks", "glass", "wool",
+
+  // 🌲 Wood & planks
+  "oak_log", "oak_planks",
+  "birch_log", "birch_plank",
+  "spruce_log", "spruce_planks",
+  "acacia_log", "acacia_planks",
+
+  // 💎 Valuable blocks
+  "block_of_iron", "block_of_gold", "block_of_emerald", "block_of_diamond",
+
+  // 🔨 Functional blocks
+  "crafting_table", "enchanting_table", "jukebox", "chest", "off_furnace", "beacon",
+
+  // 🌱 Ground cover & terrain
+  "farmland", "podzol", "sand", "red_sand", "mud_bricks", "mycelium", "moss_block",
+
+  // 🌿 Decorative/natural
+  "mossy_cobblestone", "glowstone", "ice", "white_glazed_terracotta",
+
+  // ❓ Miscellaneous or placeholders
+  "basal"
 ];
+
 
 function normalize(name) {
   return name.replaceAll("_", " ").replace(/\b\w/g, l => l.toUpperCase());
