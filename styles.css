@@ -116,6 +116,29 @@ input[type="text"] {
 
 .floor-buttons {
   display: flex;
-  gap: 0.25rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
 }
+
+.undo-redo-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.undo-redo-row button {
+  flex: 1;
+  padding: 6px 12px;
+  font-size: 1rem;
+  border: none;
+  background-color: #2d89ef;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.undo-redo-row button:hover {
+  background-color: #1b5faa;
+}
+
