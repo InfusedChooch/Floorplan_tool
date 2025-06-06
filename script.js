@@ -11,6 +11,7 @@ const heightInput = document.getElementById("heightInput");
 const updateGridBtn = document.getElementById("updateGrid");
 const resetGridBtn = document.getElementById("resetGrid");
 const clearGridBtn = document.getElementById("clearGrid");
+const rotateBtn = document.getElementById("rotateBtn");
 const floorNumber = document.getElementById("floorNumber");
 const addFloorBtn = document.getElementById("addFloor");
 const deleteFloorBtn = document.getElementById("deleteFloor");
@@ -18,11 +19,17 @@ const deleteFloorBtn = document.getElementById("deleteFloor");
 
 let tileSize = 32;
 let currentBlock = "stone";
+let currentRotation = 0; // 0, 90, 180, 270
 let blockImages = {};
 let isMouseDown = false;
 let isRightClick = false;
+const accessoryPalette = document.getElementById("accessoryPalette");
+let currentAccessory = "";
+let accessoryImages = {};
+let placementMode = "block"; // "block" or "accessory"
 
 let floors = [];            // Each element is a 2D array: floors[floorIndex][y][x]
+let accessories = [];       // Mirrors floors: accessories[floorIndex][y][x]
 let floorVisibility = [];   // Boolean array: visibility per floor
 let floorNames = [];        // String array: name per floor
 let currentFloor = 0;
@@ -43,8 +50,19 @@ const blockCategories = {
   "Functional": ["crafting_table", "enchanting_table", "jukebox", "chest", "off_furnace", "beacon", "bed"],
   "Ground Cover": ["farmland", "podzol", "sand", "red_sand", "mud_bricks", "mycelium", "moss_block"],
   "Decorative": ["mossy_cobblestone", "glowstone", "ice", "white_glazed_terracotta", "bookshelf"],
-  "Misc": ["basal"] 
+  "Misc": ["basal"]
 };
+
+const accessoryList = [
+  "chest",
+  "crafting_table",
+  "enchanting_table",
+  "beacon"
+];
+
+const twoCellBlocks = Object.values(blockCategories)
+  .flat()
+  .filter(b => b.includes("bed"));
 
 function normalize(name) {
   return name.replaceAll("_", " ").replace(/\b\w/g, l => l.toUpperCase());
@@ -104,9 +122,38 @@ function renderPalette(category = "All") {
 
     img.addEventListener("click", () => {
       currentBlock = name;
-      document.querySelectorAll(".block-tile").forEach(t => t.classList.remove("selected"));
+      placementMode = "block";
+      document.querySelectorAll("#blockPalette .block-tile").forEach(t => t.classList.remove("selected"));
+      document.querySelectorAll("#accessoryPalette .block-tile").forEach(t => t.classList.remove("selected"));
       img.classList.add("selected");
       document.getElementById("currentBlock").textContent = normalize(currentBlock);
+    });
+  });
+}
+
+function renderAccessoryPalette() {
+  if (!accessoryPalette) return;
+  accessoryPalette.innerHTML = "";
+  accessoryList.forEach(name => {
+    const img = document.createElement("img");
+    img.src = `assets/${name}.png`;
+    img.alt = normalize(name);
+    img.classList.add("block-tile");
+    img.dataset.accessory = name;
+    accessoryPalette.appendChild(img);
+
+    const tileImg = new Image();
+    tileImg.src = img.src;
+    accessoryImages[name] = tileImg;
+
+    img.addEventListener("click", () => {
+      currentAccessory = name;
+      placementMode = "accessory";
+      accessoryPalette.querySelectorAll(".block-tile").forEach(t => t.classList.remove("selected"));
+      blockPalette.querySelectorAll(".block-tile").forEach(t => t.classList.remove("selected"));
+      img.classList.add("selected");
+      const el = document.getElementById("currentAccessory");
+      if (el) el.textContent = normalize(currentAccessory);
     });
   });
 }
@@ -117,7 +164,15 @@ blockFilter.addEventListener("change", () => {
 
 
 function createEmptyGrid(w, h) {
-  return Array.from({ length: h }, () => Array(w).fill(""));
+  return Array.from({ length: h }, () =>
+    Array.from({ length: w }, () => ({ block: "", rotation: 0 }))
+  );
+}
+
+function createEmptyAccessoryGrid(w, h) {
+  return Array.from({ length: h }, () =>
+    Array.from({ length: w }, () => "")
+  );
 }
 
 function initGrid(w, h) {
@@ -131,6 +186,9 @@ function initGrid(w, h) {
 
   if (!floors[currentFloor]) {
     floors[currentFloor] = createEmptyGrid(w, h);
+    accessories[currentFloor] = createEmptyAccessoryGrid(w, h);
+  } else if (!accessories[currentFloor]) {
+    accessories[currentFloor] = createEmptyAccessoryGrid(w, h);
   }
   drawGrid();
   updateBlockCounts();
@@ -139,6 +197,7 @@ function initGrid(w, h) {
 function pushUndo() {
   undoStack.push(structuredClone({
     floors,
+    accessories,
     floorNames,
     floorVisibility,
     currentFloor
@@ -159,10 +218,52 @@ function drawGrid() {
     ctx.globalAlpha = i === currentFloor ? 1 : 0.3;
     for (let y = 0; y < gridHeight; y++) {
       for (let x = 0; x < gridWidth; x++) {
-        const block = grid[y][x];
-        if (block && blockImages[block]) {
+        const cell = grid[y][x];
+        if (cell.block && blockImages[cell.block]) {
+          const isTwoCell = twoCellBlocks.includes(cell.block);
+          if (isTwoCell && cell.part === "head") {
+            // head tile is drawn with the foot tile
+            continue;
+          }
+
+          if (isTwoCell) {
+            // Determine drawing bounds based on rotation
+            const rot = cell.rotation || 0;
+            let drawX = x;
+            let drawY = y;
+            let drawW = rot % 180 === 0 ? tileSize * 2 : tileSize;
+            let drawH = rot % 180 === 0 ? tileSize : tileSize * 2;
+
+            if (rot === 180) drawX = x - 1;
+            if (rot === 270) drawY = y - 1;
+
+            ctx.drawImage(
+              blockImages[cell.block],
+              drawX * tileSize,
+              drawY * tileSize,
+              drawW,
+              drawH
+            );
+          } else {
+            ctx.save();
+            const cx = x * tileSize + tileSize / 2;
+            const cy = y * tileSize + tileSize / 2;
+            ctx.translate(cx, cy);
+            ctx.rotate((cell.rotation || 0) * Math.PI / 180);
+            ctx.drawImage(
+              blockImages[cell.block],
+              -tileSize / 2,
+              -tileSize / 2,
+              tileSize,
+              tileSize
+            );
+            ctx.restore();
+          }
+        }
+        const acc = accessories[i]?.[y]?.[x];
+        if (acc && accessoryImages[acc]) {
           ctx.drawImage(
-            blockImages[block],
+            accessoryImages[acc],
             x * tileSize,
             y * tileSize,
             tileSize,
@@ -221,9 +322,62 @@ function placeBlock(e, isErase = false) {
   const x = Math.floor((e.clientX - rect.left) / tileSize);
   const y = Math.floor((e.clientY - rect.top) / tileSize);
   if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
-    floors[currentFloor][y][x] = isErase ? "" : currentBlock;
+    if (isErase) {
+      floors[currentFloor][y][x] = { block: "", rotation: 0 };
+    } else {
+      const twoCell = twoCellBlocks.includes(currentBlock);
+
+      if (twoCell) {
+        const dirMap = {
+          0: [1, 0],
+          90: [0, 1],
+          180: [-1, 0],
+          270: [0, -1]
+        };
+        const [dx, dy] = dirMap[currentRotation];
+        const x2 = x + dx;
+        const y2 = y + dy;
+        if (
+          x2 < 0 ||
+          x2 >= gridWidth ||
+          y2 < 0 ||
+          y2 >= gridHeight ||
+          floors[currentFloor][y2][x2].block
+        ) {
+          return; // invalid placement
+        }
+        floors[currentFloor][y][x] = {
+          block: currentBlock,
+          rotation: currentRotation,
+          part: "foot"
+        };
+        floors[currentFloor][y2][x2] = {
+          block: currentBlock,
+          rotation: currentRotation,
+          part: "head"
+        };
+      } else {
+        floors[currentFloor][y][x] = {
+          block: currentBlock,
+          rotation: currentRotation
+        };
+      }
+    }
     drawGrid();
     updateBlockCounts();
+  }
+}
+
+function placeAccessory(e, isErase = false) {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / tileSize);
+  const y = Math.floor((e.clientY - rect.top) / tileSize);
+  if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
+    if (!accessories[currentFloor]) {
+      accessories[currentFloor] = createEmptyAccessoryGrid(gridWidth, gridHeight);
+    }
+    accessories[currentFloor][y][x] = isErase ? "" : currentAccessory;
+    drawGrid();
   }
 }
 
@@ -238,7 +392,11 @@ canvas.addEventListener("mousemove", (e) => {
     hoverCoords.textContent = `${x}, ${y}`;
 
     if (isMouseDown) {
-      placeBlock(e, isRightClick);
+      if (placementMode === "accessory") {
+        placeAccessory(e, isRightClick);
+      } else {
+        placeBlock(e, isRightClick);
+      }
     }
 
     drawGrid(); // ⬅️ Redraw the grid to show hover outline
@@ -250,7 +408,11 @@ canvas.addEventListener("mousedown", (e) => {
   pushUndo();
   isMouseDown = true;
   isRightClick = (e.button === 2);
-  placeBlock(e, isRightClick);
+  if (placementMode === "accessory") {
+    placeAccessory(e, isRightClick);
+  } else {
+    placeBlock(e, isRightClick);
+  }
 });
 canvas.addEventListener("mouseup", () => { isMouseDown = false; });
 canvas.addEventListener("mouseleave", () => { isMouseDown = false; });
@@ -262,12 +424,17 @@ updateGridBtn.addEventListener("click", () => {
   const newH = parseInt(heightInput.value);
   if (newW % 2 === 0 && newH % 2 === 0) {
     const newGrid = createEmptyGrid(newW, newH);
+    const newAccGrid = createEmptyAccessoryGrid(newW, newH);
     for (let y = 0; y < Math.min(gridHeight, newH); y++) {
       for (let x = 0; x < Math.min(gridWidth, newW); x++) {
-        newGrid[y][x] = floors[currentFloor][y][x];
+        newGrid[y][x] = structuredClone(floors[currentFloor][y][x]);
+        if (accessories[currentFloor]) {
+          newAccGrid[y][x] = accessories[currentFloor][y][x];
+        }
       }
     }
     floors[currentFloor] = newGrid;
+    accessories[currentFloor] = newAccGrid;
     initGrid(newW, newH);
   } else {
     alert("Please enter even values for width and height.");
@@ -277,7 +444,7 @@ updateGridBtn.addEventListener("click", () => {
 // 4. Fill the entire active floor with the selected block
 resetGridBtn.addEventListener("click", () => {
   floors[currentFloor] = Array.from({ length: gridHeight }, () =>
-    Array.from({ length: gridWidth }, () => currentBlock)
+    Array.from({ length: gridWidth }, () => ({ block: currentBlock, rotation: currentRotation }))
   );
   drawGrid();
   updateBlockCounts();
@@ -286,8 +453,20 @@ resetGridBtn.addEventListener("click", () => {
 // 5. Clear the entire active floor to empty
 clearGridBtn.addEventListener("click", () => {
   floors[currentFloor] = createEmptyGrid(gridWidth, gridHeight);
+  accessories[currentFloor] = createEmptyAccessoryGrid(gridWidth, gridHeight);
   drawGrid();
   updateBlockCounts();
+});
+
+rotateBtn.addEventListener("click", () => {
+  currentRotation = (currentRotation + 90) % 360;
+  rotateBtn.textContent = `Rotate (R) \u2191 ${currentRotation}°`;
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "r" || e.key === "R") {
+    rotateBtn.click();
+  }
 });
 
 function updateFloorLabel() {
@@ -297,6 +476,7 @@ function updateFloorLabel() {
 function addFloor() {
   currentFloor = floors.length;
   floors[currentFloor] = createEmptyGrid(gridWidth, gridHeight);
+  accessories[currentFloor] = createEmptyAccessoryGrid(gridWidth, gridHeight);
   floorVisibility[currentFloor] = true;
   floorNames[currentFloor] = `Floor ${currentFloor + 1}`;
   updateFloorLabel();
@@ -315,6 +495,7 @@ deleteFloorBtn.addEventListener("click", () => {
 
   // Remove current floor
   floors.splice(currentFloor, 1);
+  accessories.splice(currentFloor, 1);
   floorVisibility.splice(currentFloor, 1);
   floorNames.splice(currentFloor, 1);
 
@@ -335,9 +516,11 @@ function updateBlockCounts() {
     if (!floorVisibility[i]) return;
 
     for (let row of grid) {
-      for (let block of row) {
-        if (!block) continue;
-        count[block] = (count[block] || 0) + 1;
+      for (let cell of row) {
+        if (!cell.block) continue;
+        const isTwoCell = twoCellBlocks.includes(cell.block);
+        if (isTwoCell && cell.part === "head") continue;
+        count[cell.block] = (count[cell.block] || 0) + 1;
       }
     }
   });
@@ -415,6 +598,7 @@ function updateLayerManager() {
 
 function swapFloors(i, j) {
   [floors[i], floors[j]] = [floors[j], floors[i]];
+  [accessories[i], accessories[j]] = [accessories[j], accessories[i]];
   [floorVisibility[i], floorVisibility[j]] = [floorVisibility[j], floorVisibility[i]];
   [floorNames[i], floorNames[j]] = [floorNames[j], floorNames[i]];
   if (currentFloor === i) currentFloor = j;
@@ -476,8 +660,11 @@ exportBtn.addEventListener("click", () => {
 
     // Count
     const count = {};
-    grid.forEach(row => row.forEach(block => {
-      if (block) count[block] = (count[block] || 0) + 1;
+    grid.forEach(row => row.forEach(cell => {
+      if (!cell.block) return;
+      const isTwoCell = twoCellBlocks.includes(cell.block);
+      if (isTwoCell && cell.part === "head") return;
+      count[cell.block] = (count[cell.block] || 0) + 1;
     }));
 
 exportCtx.font = "12px sans-serif";
@@ -509,10 +696,50 @@ statLines.forEach((line, i) => {
     // Blocks
     for (let y = 0; y < gridHeight; y++) {
       for (let x = 0; x < gridWidth; x++) {
-        const block = grid[y][x];
-        if (block && blockImages[block]) {
+        const cell = grid[y][x];
+        if (cell.block && blockImages[cell.block]) {
+          const isTwoCell = twoCellBlocks.includes(cell.block);
+          if (isTwoCell && cell.part === "head") {
+            continue;
+          }
+
+          if (isTwoCell) {
+            const rot = cell.rotation || 0;
+            let drawX = x;
+            let drawY = y;
+            let drawW = rot % 180 === 0 ? tileSize * 2 : tileSize;
+            let drawH = rot % 180 === 0 ? tileSize : tileSize * 2;
+
+            if (rot === 180) drawX = x - 1;
+            if (rot === 270) drawY = y - 1;
+
+            exportCtx.drawImage(
+              blockImages[cell.block],
+              xOffset + drawX * tileSize,
+              yOffset + labelHeight + drawY * tileSize,
+              drawW,
+              drawH
+            );
+          } else {
+            exportCtx.save();
+            const cx = xOffset + x * tileSize + tileSize / 2;
+            const cy = yOffset + labelHeight + y * tileSize + tileSize / 2;
+            exportCtx.translate(cx, cy);
+            exportCtx.rotate((cell.rotation || 0) * Math.PI / 180);
+            exportCtx.drawImage(
+              blockImages[cell.block],
+              -tileSize / 2,
+              -tileSize / 2,
+              tileSize,
+              tileSize
+            );
+            exportCtx.restore();
+          }
+        }
+        const acc = accessories[i]?.[y]?.[x];
+        if (acc && accessoryImages[acc]) {
           exportCtx.drawImage(
-            blockImages[block],
+            accessoryImages[acc],
             xOffset + x * tileSize,
             yOffset + labelHeight + y * tileSize,
             tileSize,
@@ -556,6 +783,7 @@ statLines.forEach((line, i) => {
 window.onload = () => {
   // Immediately create Floor 1 and mark it visible
   floors.push(createEmptyGrid(gridWidth, gridHeight));
+  accessories.push(createEmptyAccessoryGrid(gridWidth, gridHeight));
   floorVisibility.push(true);
   floorNames.push("Floor 1");
 
@@ -565,10 +793,12 @@ window.onload = () => {
   updateBlockCounts();
   updateLayerManager();
   renderPalette();
+  renderAccessoryPalette();
   // Select the first block icon by default
   const firstTile = document.querySelector(".block-tile");
   if (firstTile) firstTile.classList.add("selected");
-  
+  if (rotateBtn) rotateBtn.textContent = `Rotate (R) \u2191 ${currentRotation}°`;
+
 };
 
 document.getElementById("undoBtn").addEventListener("click", () => {
@@ -576,6 +806,7 @@ document.getElementById("undoBtn").addEventListener("click", () => {
 
   redoStack.push(structuredClone({
     floors,
+    accessories,
     floorNames,
     floorVisibility,
     currentFloor
@@ -583,6 +814,7 @@ document.getElementById("undoBtn").addEventListener("click", () => {
 
   const prevState = undoStack.pop();
   floors = prevState.floors;
+  accessories = prevState.accessories;
   floorNames = prevState.floorNames;
   floorVisibility = prevState.floorVisibility;
   currentFloor = prevState.currentFloor;
@@ -600,6 +832,7 @@ document.getElementById("redoBtn").addEventListener("click", () => {
 
   undoStack.push(structuredClone({
     floors,
+    accessories,
     floorNames,
     floorVisibility,
     currentFloor
@@ -607,6 +840,7 @@ document.getElementById("redoBtn").addEventListener("click", () => {
 
   const nextState = redoStack.pop();
   floors = nextState.floors;
+  accessories = nextState.accessories;
   floorNames = nextState.floorNames;
   floorVisibility = nextState.floorVisibility;
   currentFloor = nextState.currentFloor;

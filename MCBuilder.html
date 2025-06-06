@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!-- MCBuilder.html -->
+ <!-- Updated 6/3 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minecraft Floorplan Creator</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <style>
+    /* If you want to see the canvas wrapper more clearly, you can temporarily add a background color: */
+    /* .canvas-wrapper { background: #f0f0f0; } */
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Minecraft Design Tool</h1>
+  </div>
+
+  <div class="project-info">
+    <input type="text" id="studentName" placeholder="Student Name" />
+    <input type="text" id="projectTitle" placeholder="Project Title" />
+    
+  </div>
+
+  <div class="design-section">
+    <div class="canvas-wrapper">
+      <canvas id="floorCanvas"></canvas>
+      <div id="hoverCoords">0, 0</div>
+    </div>
+
+<div class="floor-controls">
+  <label>Floor: <span id="floorNumber">1</span></label>
+  <!-- add-floor button that the JS expects -->
+  <button id="addFloor">+ Add Floor</button>
+  <button id="deleteFloor">🗑️ Delete Floor</button>
+  <div id="layerManager" class="floor-buttons"></div>
+  <div id="blockCounts" style="margin-top:10px;font-size:.9rem;"></div>
+</div>
+
+
+    <div class="settings">
+      <label for="widthInput">Width:</label>
+      <input type="number" id="widthInput" min="4" max="50" step="2" value="16" />
+      <label for="heightInput">Height:</label>
+      <input type="number" id="heightInput" min="4" max="50" step="2" value="16" />
+      <button id="updateGrid">Update Grid Size</button>
+      <div class="undo-redo-row">
+        <button id="undoBtn">Undo</button>
+        <button id="redoBtn">Redo</button>
+      </div>
+      <button id="rotateBtn">Rotate (R)</button>
+      <button id="resetGrid">Fill grid to selected material</button>
+      <button id="clearGrid">Clear current floor</button>
+      <button id="exportBtn">Save Design</button>
+    </div>
+  </div>
+
+<label for="blockFilter">Filter Blocks:</label>
+<select id="blockFilter">
+  <option value="All">All</option>
+</select>
+
+  <div class="palette-section">
+    <h2>Material</h2>
+    <div id="selectedMaterial">Selected: <span id="currentBlock">stone</span></div>
+    <div id="blockPalette" class="scroll-palette">
+      <!-- The JS will insert block images here -->
+    </div>
+  </div>
+
+  <div class="palette-section">
+    <h2>Accessory</h2>
+    <div id="selectedAccessory">Accessory: <span id="currentAccessory">None</span></div>
+    <div id="accessoryPalette" class="scroll-palette"></div>
+  </div>
+
+  <script src="../script.js"></script>
+</body>
+</html>
